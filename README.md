@@ -49,73 +49,155 @@ CREATE TABLE pizza_sales
 - **Null Value Check**: Check for any null values in the dataset and delete records with missing data.
 
 ```sql
-SELECT COUNT(*) FROM pizza_sales;
-SELECT COUNT(DISTINCT customer_id) FROM pizza_sales;
-SELECT DISTINCT category FROM pizza_sales;
+--check if import of data has happened
+SELECT * FROM pizza_sales;
+limit 10;
 
+--verify with excel on to how many records have been imported
+Select count(*) from pizza_sales;
+
+
+--grouping data based on total count of male & female customers 
+select gender, count(*) from pizza_sales group by gender;
+
+--Checking for NULL values in all the COLUMNS (DATA CLEANING)
+select * from pizza_sales where transactions_id is null;
+
+select * from pizza_sales where sale_date is null;
+
+select * from pizza_sales where sale_time is null;
+
+select * from pizza_sales where customer_id is null;
+
+select * from pizza_sales where gender is null;
+
+--I find some nulls in age column 
+select * from pizza_sales where age is null;
+
+select * from pizza_sales where category is null;
+select * from pizza_sales where  price_per_unit is null;
+select * from pizza_sales where  cogs is null;
+select * from pizza_sales where  total_sale is null;
+
+--Instead of checking one by one we can check Null for all columns
+--WE GET 13 RECORDS HAVING NULLS
 SELECT * FROM pizza_sales
-WHERE 
-    sale_date IS NULL OR sale_time IS NULL OR customer_id IS NULL OR 
-    gender IS NULL OR age IS NULL OR category IS NULL OR 
-    quantity IS NULL OR price_per_unit IS NULL OR cogs IS NULL;
+where
+transactions_id is null
+or
+sale_date is null
+or
+sale_time is null
+or
+customer_id is null
+or
+gender is null
+or
+age is null
+or
+category is null
+or
+price_per_unit is null
+or
+cogs is null
+or
+total_sale is null;
 
+--Deleting all nulls from data
 DELETE FROM pizza_sales
-WHERE 
-    sale_date IS NULL OR sale_time IS NULL OR customer_id IS NULL OR 
-    gender IS NULL OR age IS NULL OR category IS NULL OR 
-    quantity IS NULL OR price_per_unit IS NULL OR cogs IS NULL;
+where
+transactions_id is null
+or
+sale_date is null
+or
+sale_time is null
+or
+customer_id is null
+or
+gender is null
+or
+age is null
+or
+category is null
+or
+price_per_unit is null
+or
+cogs is null
+or
+total_sale is null;
+
+--verify with counting the records (13 records should have been deleted out of 2000 records)
+select count(*) from pizza_sales;
+
+
+--Exploring Data 
+------------------
+
+--1.HOW MANY SALES WE HAVE ?
+SELECT COUNT(*) as total sales FROM pizza_sales;  --1987 sales
+
+--2.how many customers do we have?
+select count(customer_id) as total_sales from pizza_sales; --1987 sales
+
+--3.how many unique customers are there?
+select count(distinct(customer_id)) as total_sales from pizza_sales; --155 unique customers
+
+--4.how many categories are there?
+select distinct category from pizza_sales; -- 3 categories Electronics,Clothing,Beauty.
 ```
 
 ### 3. Data Analysis & Findings
 
 The following SQL queries were developed to answer specific business questions:
 
-1. **Write a SQL query to retrieve all columns for sales made on '2022-11-05**:
+1. **Q.1 Write an SQL query to retrieve all columns for sales made on '2022-11-05'**:
 ```sql
-SELECT *
-FROM pizza_sales
-WHERE sale_date = '2022-11-05';
+select * from pizza_sales where sale_date = '2022-11-05';  --11 sales were made
 ```
 
 2. **Write a SQL query to retrieve all transactions where the category is 'Clothing' and the quantity sold is more than 4 in the month of Nov-2022**:
 ```sql
-SELECT 
-  *
+--first we will see each category and quantity sold
+select category ,sum(quantity)  from pizza_sales
+where category='Clothing'
+group by category;   ---"Electronics"	1682,"Clothing"	1780 "Beauty"	1533
+
+
+SELECT *
 FROM pizza_sales
-WHERE 
-    category = 'Clothing'
-    AND 
-    TO_CHAR(sale_date, 'YYYY-MM') = '2022-11'
-    AND
-    quantity >= 4
+WHERE Category = 'Clothing'
+  AND quantity > 3
+  AND to_char(sale_date,'yyyy-mm') = '2022-11';
 ```
 
-3. **Write a SQL query to calculate the total sales (total_sale) for each category.**:
+3. **Write an SQL query to calculate the total sales (total_sale) for each category.**:
 ```sql
-SELECT 
-    category,
-    SUM(total_sale) as net_sale,
-    COUNT(*) as total_orders
-FROM pizza_sales
-GROUP BY 1
+select Category , 
+sum(total_sale) as net_sales,
+count(*) as total orders from pizza_sales 
+group by Category;
 ```
 
 4. **Write a SQL query to find the average age of customers who purchased items from the 'Beauty' category.**:
 ```sql
-SELECT
-    ROUND(AVG(age), 2) as avg_age
-FROM pizza_sales
-WHERE category = 'Beauty'
+select category,Round(avg(age), 2) as average_age from pizza_sales 
+where category = 'Beauty'
+group by category;
 ```
 
 5. **Write a SQL query to find all transactions where the total_sale is greater than 1000.**:
 ```sql
-SELECT * FROM pizza_sales
-WHERE total_sale > 1000
+select * from pizza_sales 
+where total_sale > 1000;
 ```
 
 6. **Write a SQL query to find the total number of transactions (transaction_id) made by each gender in each category.**:
 ```sql
+select distinct(category),gender,count(transactions_id) from pizza_sales
+group by category,gender
+;
+
+--or you can use below query too
 SELECT 
     category,
     gender,
@@ -130,6 +212,46 @@ ORDER BY 1
 
 7. **Write a SQL query to calculate the average sale for each month. Find out best selling month in each year**:
 ```sql
+--Query to Calculate the Average Sale for Each Month
+SELECT 
+EXTRACT(YEAR FROM sale_date) AS Year,
+EXTRACT(MONTH FROM sale_date) AS Month,
+AVG(total_sale) AS AverageMonthlySale
+FROM 
+pizza_sales
+GROUP BY 
+EXTRACT(YEAR FROM sale_date), EXTRACT(MONTH FROM sale_date)
+ORDER BY 
+Year, Month;
+                               --using orderby gives more readable output
+--now after the above query i need one best month from 2022 and 2023
+WITH MonthlySales AS (
+SELECT 
+EXTRACT(YEAR FROM sale_date) AS Year,
+EXTRACT(MONTH FROM sale_date) AS Month,
+SUM(total_sale) AS TotalMonthlySale
+FROM 
+pizza_sales
+GROUP BY 
+EXTRACT(YEAR FROM sale_date), EXTRACT(MONTH FROM sale_date)
+)
+SELECT 
+Year,Month,TotalMonthlySale
+FROM 
+MonthlySales
+WHERE 
+TotalMonthlySale = (
+SELECT 
+MAX(TotalMonthlySale)
+FROM 
+MonthlySales AS InnerMonthlySales
+WHERE 
+InnerMonthlySales.Year = MonthlySales.Year
+    )
+ORDER BY 
+Year, Month;
+
+---sought some help with chatgpt as well. thebelow code also works for it
 SELECT 
        year,
        month,
@@ -149,22 +271,19 @@ WHERE rank = 1
 
 8. **Write a SQL query to find the top 5 customers based on the highest total sales **:
 ```sql
-SELECT 
-    customer_id,
-    SUM(total_sale) as total_sales
+SELECT customer_id,SUM(total_sale) as total_sales
 FROM pizza_sales
 GROUP BY 1
 ORDER BY 2 DESC
-LIMIT 5
+LIMIT 5;
 ```
 
 9. **Write a SQL query to find the number of unique customers who purchased items from each category.**:
 ```sql
-SELECT 
-    category,    
-    COUNT(DISTINCT customer_id) as cnt_unique_cs
+SELECT category,    
+COUNT(DISTINCT customer_id) as cnt_unique_cs
 FROM pizza_sales
-GROUP BY category
+GROUP BY category;
 ```
 
 10. **Write a SQL query to create each shift and number of orders (Example Morning <12, Afternoon Between 12 & 17, Evening >17)**:
